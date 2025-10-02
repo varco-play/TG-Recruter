@@ -8,9 +8,8 @@ if (!TOKEN || !MANAGER_ID) {
   throw new Error("❌ BOT_TOKEN and MANAGER_CHAT_ID must be set");
 }
 
-// create bot in webhook mode
 const bot = new TelegramBot(TOKEN);
-const sessions = {}; // in-memory user sessions (resets if redeployed)
+const sessions = {}; // in-memory sessions
 
 // --- Keyboards ---
 function vacancyKeyboard() {
@@ -68,13 +67,12 @@ function sendConfirmation(chatId, s) {
   );
 }
 
-// --- Main Vercel handler ---
+// --- Vercel handler ---
 export default async function handler(req, res) {
   if (req.method === "POST") {
     bot.processUpdate(req.body);
     return res.status(200).end();
   }
-
   return res.status(200).send("🤖 Bot is running!");
 }
 
@@ -82,10 +80,7 @@ export default async function handler(req, res) {
 bot.onText(/\/start|\/apply/i, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { step: "name" };
-  bot.sendMessage(
-    chatId,
-    "🤖 Welcome to Recruiting Bot!\n\nWhat’s your full name?"
-  );
+  bot.sendMessage(chatId, "🤖 Welcome to Recruiting Bot!\n\nWhat’s your full name?");
 });
 
 bot.onText(/\/cancel/i, (msg) => {
@@ -107,14 +102,12 @@ bot.on("message", (msg) => {
       s.name = text;
       s.step = "contact";
       return bot.sendMessage(chatId, "📱 Provide your contact number with country code:");
-
     case "contact":
       s.contact = text;
       s.step = "language";
       return bot.sendMessage(chatId, "🌍 Which language do you know?", {
         reply_markup: languageKeyboard(),
       });
-
     case "language":
       if (["English", "Russian", "Spanish"].includes(text)) {
         s.language = { name: text };
@@ -124,39 +117,32 @@ bot.on("message", (msg) => {
         });
       }
       return bot.sendMessage(chatId, "⚠️ Please select a language from the options.");
-
     case "proficiency":
       s.language.level = text;
       s.step = "experience";
       return bot.sendMessage(chatId, "💼 Briefly describe your experience:");
-
     case "experience":
       s.experience = text;
       s.step = "state";
       return bot.sendMessage(chatId, "📍 Which state do you live in?");
-
     case "state":
       s.state = text;
       s.step = "city";
       return bot.sendMessage(chatId, "🏙️ Which city do you live in?");
-
     case "city":
       s.city = text;
       s.step = "zip";
       return bot.sendMessage(chatId, "📮 Please provide your ZIP code:");
-
     case "zip":
       s.zip = text;
       s.step = "driver_license";
       return bot.sendMessage(chatId, "🚘 Do you have a driver’s license?", {
         reply_markup: yesNoInlineKeyboard(),
       });
-
     case "vacancy":
       s.vacancy = text;
       s.step = "confirm";
       return sendConfirmation(chatId, s);
-
     default:
       return;
   }
