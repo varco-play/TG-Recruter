@@ -123,12 +123,12 @@ bot.on('message', (msg) => {
     case 'experience':
       s.experience = text;
       s.step = 'state';
-      return bot.sendMessage(chatId, "📍 Which *state* do you live in?");
+      return bot.sendMessage(chatId, "📍 Which *State* do you live in?", { parse_mode: "Markdown" });
 
     case 'state':
       s.state = text;
       s.step = 'city';
-      return bot.sendMessage(chatId, "🏙️ Which *city* do you live in?");
+      return bot.sendMessage(chatId, "🏙️ Which *City* do you live in?", { parse_mode: "Markdown" });
 
     case 'city':
       s.city = text;
