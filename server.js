@@ -21,8 +21,6 @@ function vacancyKeyboard() {
   for (let i = 0; i < VACANCIES.length; i += 2) {
     kb.push([VACANCIES[i], VACANCIES[i + 1]].filter(Boolean));
   }
-  kb.push(["Other"]);
-  return { keyboard: kb, one_time_keyboard: true, resize_keyboard: true };
 }
 
 function languageKeyboard() {
