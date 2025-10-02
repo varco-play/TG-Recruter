@@ -1,19 +1,27 @@
 // server.js
 require('dotenv').config();
+const express = require('express');
+const bodyParser = require('body-parser');
 const TelegramBot = require('node-telegram-bot-api');
+
+const app = express();
+app.use(bodyParser.json());
 
 const TOKEN = process.env.BOT_TOKEN;
 const MANAGER_ID = process.env.MANAGER_CHAT_ID;
 const VACANCIES = JSON.parse(process.env.VACANCIES || "[]");
+const SERVER_URL = process.env.SERVER_URL; // e.g. https://your-app.onrender.com
 
-if (!TOKEN || !MANAGER_ID) {
-  console.error("❌ BOT_TOKEN and MANAGER_CHAT_ID must be set in .env");
+if (!TOKEN || !MANAGER_ID || !SERVER_URL) {
+  console.error("❌ BOT_TOKEN, MANAGER_CHAT_ID, SERVER_URL must be set in .env");
   process.exit(1);
 }
 
-// --- TELEGRAM BOT (polling) ---
-const bot = new TelegramBot(TOKEN, { polling: true });
-const sessions = {}; // in-memory state (reset if server restarts)
+// --- TELEGRAM BOT (webhook mode) ---
+const bot = new TelegramBot(TOKEN, { webHook: true });
+bot.setWebHook(`${SERVER_URL}/webhook/${TOKEN}`);
+
+const sessions = {}; // in-memory user states
 
 // --- Keyboards ---
 function vacancyKeyboard() {
@@ -71,10 +79,16 @@ function sendConfirmation(chatId, s) {
   );
 }
 
+// --- Routes ---
+app.post(`/webhook/${TOKEN}`, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
 // --- Bot Logic ---
 bot.onText(/\/start|\/apply/i, (msg) => {
   const chatId = msg.chat.id;
-  sessions[chatId] = { step: 'name', lastStep: null };
+  sessions[chatId] = { step: 'name' };
   bot.sendMessage(chatId, "🤖 Welcome to Recruiting Bot!\n\nWhat’s your full name?");
 });
 
@@ -90,13 +104,7 @@ bot.on('message', (msg) => {
   if (!text || text.startsWith('/')) return;
 
   const s = sessions[chatId];
-  if (!s) {
-    return bot.sendMessage(chatId, "Send /apply to start a new application.");
-  }
-
-  // prevent duplicate triggers
-  if (s.lastStep === s.step) return;
-  s.lastStep = s.step;
+  if (!s) return bot.sendMessage(chatId, "Send /apply to start a new application.");
 
   switch (s.step) {
     case 'name':
@@ -115,7 +123,6 @@ bot.on('message', (msg) => {
         s.step = 'proficiency';
         return bot.sendMessage(chatId, `📊 What is your proficiency in ${text}?`, { reply_markup: proficiencyKeyboard() });
       } else {
-        s.lastStep = null; // allow retry
         return bot.sendMessage(chatId, "⚠️ Please select a language from the options.");
       }
 
@@ -163,14 +170,12 @@ bot.on('callback_query', (query) => {
   if (query.data === "driver_yes") {
     s.driverLicense = "Yes";
     s.step = 'vacancy';
-    s.lastStep = null; // reset so vacancy prompt shows
     bot.sendMessage(chatId, "📌 Which vacancy are you applying for?", { reply_markup: vacancyKeyboard() });
   }
 
   if (query.data === "driver_no") {
     s.driverLicense = "No";
     s.step = 'vacancy';
-    s.lastStep = null;
     bot.sendMessage(chatId, "📌 Which vacancy are you applying for?", { reply_markup: vacancyKeyboard() });
   }
 
@@ -198,3 +203,7 @@ bot.on('callback_query', (query) => {
 
   bot.answerCallbackQuery(query.id);
 });
+
+// --- Start server ---
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
