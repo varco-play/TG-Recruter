@@ -20,8 +20,6 @@ if (!TOKEN || !MANAGER_ID || !SERVER_URL) {
 // --- TELEGRAM BOT (webhook mode) ---
 const bot = new TelegramBot(TOKEN, { webHook: true });
 
-// Register webhook with Telegram
-bot.setWebHook(`${SERVER_URL}/webhook/${TOKEN}`);
 
 const sessions = {}; // in-memory sessions (reset if server restarts)
 
@@ -208,4 +206,12 @@ bot.on('callback_query', (query) => {
 
 // --- Start server ---
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, async () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  try {
+    await bot.setWebHook(`${SERVER_URL}/webhook/${TOKEN}`);
+    console.log("✅ Webhook set successfully");
+  } catch (err) {
+    console.error("❌ Failed to set webhook:", err.message);
+  }
+});
