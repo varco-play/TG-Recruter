@@ -10,18 +10,20 @@ app.use(bodyParser.json());
 const TOKEN = process.env.BOT_TOKEN;
 const MANAGER_ID = process.env.MANAGER_CHAT_ID;
 const VACANCIES = JSON.parse(process.env.VACANCIES || "[]");
-const SERVER_URL = process.env.SERVER_URL; // e.g. https://your-app.onrender.com
+const SERVER_URL = process.env.SERVER_URL; // e.g. https://tg-recruter.onrender.com
 
-if (!TOKEN || !MANAGER_ID) {
-  console.error("❌ BOT_TOKEN, MANAGER_CHAT_ID, SERVER_URL must be set in .env");
+if (!TOKEN || !MANAGER_ID || !SERVER_URL) {
+  console.error("❌ BOT_TOKEN, MANAGER_CHAT_ID, SERVER_URL must be set");
   process.exit(1);
 }
 
 // --- TELEGRAM BOT (webhook mode) ---
 const bot = new TelegramBot(TOKEN, { webHook: true });
+
+// Register webhook with Telegram
 bot.setWebHook(`${SERVER_URL}/webhook/${TOKEN}`);
 
-const sessions = {}; // in-memory user states
+const sessions = {}; // in-memory sessions (reset if server restarts)
 
 // --- Keyboards ---
 function vacancyKeyboard() {
@@ -79,8 +81,8 @@ function sendConfirmation(chatId, s) {
   );
 }
 
-// --- Routes ---
-app.post(`${SERVER_URL}/webhook/${TOKEN}`, (req, res) => {
+// --- Webhook route (IMPORTANT: relative path only!) ---
+app.post(`/webhook/${TOKEN}`, (req, res) => {
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
