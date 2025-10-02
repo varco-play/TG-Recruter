@@ -80,7 +80,7 @@ function sendConfirmation(chatId, s) {
 }
 
 // --- Routes ---
-app.post(`/webhook/${TOKEN}`, (req, res) => {
+app.post(`${SERVER_URL}/webhook/${TOKEN}`, (req, res) => {
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
