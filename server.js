@@ -21,7 +21,9 @@ function vacancyKeyboard() {
   for (let i = 0; i < VACANCIES.length; i += 2) {
     kb.push([VACANCIES[i], VACANCIES[i + 1]].filter(Boolean));
   }
+  return { keyboard: kb, one_time_keyboard: true, resize_keyboard: true };
 }
+
 
 function languageKeyboard() {
   return {
@@ -90,7 +92,7 @@ bot.on('message', (msg) => {
 
   const s = sessions[chatId];
   if (!s) {
-    return bot.sendMessage(chatId, "Send /apply to start an application.");
+    return bot.sendMessage(chatId, "Send /apply to start a new application.");
   }
 
   switch (s.step) {
