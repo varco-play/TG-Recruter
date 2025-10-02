@@ -24,7 +24,6 @@ function vacancyKeyboard() {
   return { keyboard: kb, one_time_keyboard: true, resize_keyboard: true };
 }
 
-
 function languageKeyboard() {
   return {
     keyboard: [["English", "Russian", "Spanish"]],
@@ -75,7 +74,7 @@ function sendConfirmation(chatId, s) {
 // --- Bot Logic ---
 bot.onText(/\/start|\/apply/i, (msg) => {
   const chatId = msg.chat.id;
-  sessions[chatId] = { step: 'name' };
+  sessions[chatId] = { step: 'name', lastStep: null };
   bot.sendMessage(chatId, "🤖 Welcome to Recruiting Bot!\n\nWhat’s your full name?");
 });
 
@@ -95,6 +94,10 @@ bot.on('message', (msg) => {
     return bot.sendMessage(chatId, "Send /apply to start a new application.");
   }
 
+  // prevent duplicate triggers
+  if (s.lastStep === s.step) return;
+  s.lastStep = s.step;
+
   switch (s.step) {
     case 'name':
       s.name = text;
@@ -112,6 +115,7 @@ bot.on('message', (msg) => {
         s.step = 'proficiency';
         return bot.sendMessage(chatId, `📊 What is your proficiency in ${text}?`, { reply_markup: proficiencyKeyboard() });
       } else {
+        s.lastStep = null; // allow retry
         return bot.sendMessage(chatId, "⚠️ Please select a language from the options.");
       }
 
@@ -123,12 +127,12 @@ bot.on('message', (msg) => {
     case 'experience':
       s.experience = text;
       s.step = 'state';
-      return bot.sendMessage(chatId, "📍 Which *State* do you live in?", { parse_mode: "Markdown" });
+      return bot.sendMessage(chatId, "📍 Which state do you live in?");
 
     case 'state':
       s.state = text;
       s.step = 'city';
-      return bot.sendMessage(chatId, "🏙️ Which *City* do you live in?", { parse_mode: "Markdown" });
+      return bot.sendMessage(chatId, "🏙️ Which city do you live in?");
 
     case 'city':
       s.city = text;
@@ -141,16 +145,6 @@ bot.on('message', (msg) => {
       return bot.sendMessage(chatId, "🚘 Do you have a driver’s license?", { reply_markup: yesNoInlineKeyboard() });
 
     case 'vacancy':
-      if (text === "Other") {
-        s.step = 'vacancy_other';
-        return bot.sendMessage(chatId, "✍️ Please type the vacancy title you want to apply for:");
-      } else {
-        s.vacancy = text;
-        s.step = 'confirm';
-        return sendConfirmation(chatId, s);
-      }
-
-    case 'vacancy_other':
       s.vacancy = text;
       s.step = 'confirm';
       return sendConfirmation(chatId, s);
@@ -169,12 +163,14 @@ bot.on('callback_query', (query) => {
   if (query.data === "driver_yes") {
     s.driverLicense = "Yes";
     s.step = 'vacancy';
+    s.lastStep = null; // reset so vacancy prompt shows
     bot.sendMessage(chatId, "📌 Which vacancy are you applying for?", { reply_markup: vacancyKeyboard() });
   }
 
   if (query.data === "driver_no") {
     s.driverLicense = "No";
     s.step = 'vacancy';
+    s.lastStep = null;
     bot.sendMessage(chatId, "📌 Which vacancy are you applying for?", { reply_markup: vacancyKeyboard() });
   }
 
