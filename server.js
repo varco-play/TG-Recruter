@@ -12,7 +12,7 @@ const MANAGER_ID = process.env.MANAGER_CHAT_ID;
 const VACANCIES = JSON.parse(process.env.VACANCIES || "[]");
 const SERVER_URL = process.env.SERVER_URL; // e.g. https://your-app.onrender.com
 
-if (!TOKEN || !MANAGER_ID || !SERVER_URL) {
+if (!TOKEN || !MANAGER_ID) {
   console.error("❌ BOT_TOKEN, MANAGER_CHAT_ID, SERVER_URL must be set in .env");
   process.exit(1);
 }
