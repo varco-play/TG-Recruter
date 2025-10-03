@@ -17,6 +17,7 @@ console.log("🤖 Bot started in polling mode!");
 
 const sessions = {};
 
+
 const T = {
   en: {
     startPanelTitle: "Welcome to GIG Investment Recruiting Bot",
