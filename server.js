@@ -185,7 +185,9 @@ bot.onText(/\/start/, async (msg) => {
   });
 });
 
-// For now: simple language switch demo
+// --------------------------------------------------
+// Conversation logic
+// --------------------------------------------------
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const raw = String(msg.text || "").trim();
@@ -193,6 +195,7 @@ bot.on("message", async (msg) => {
 
   const s = sessions[chatId];
 
+  // --- Language switching ---
   if (/English/i.test(raw)) {
     s.lang = "en";
     return bot.sendMessage(chatId, "✅ Language set to English", {
@@ -211,6 +214,99 @@ bot.on("message", async (msg) => {
       reply_markup: vacanciesKeyboard("es"),
     });
   }
+
+  // --- Vacancy selected ---
+  if (VACANCIES.includes(raw)) {
+    s.vacancy = raw;
+    s.step = "name";
+    return bot.sendMessage(chatId, t(s.lang, "askName"));
+  }
+
+  // --- Application steps ---
+  if (s.step === "name") {
+    s.name = raw;
+    s.step = "contact";
+    return bot.sendMessage(chatId, t(s.lang, "askContact"));
+  }
+
+  if (s.step === "contact") {
+    s.contact = raw;
+    s.step = "experience";
+    return bot.sendMessage(chatId, t(s.lang, "askExperience"), {
+      reply_markup: {
+        keyboard: [[t(s.lang, "exp0")], [t(s.lang, "exp1")], [t(s.lang, "exp2")]],
+        one_time_keyboard: true,
+        resize_keyboard: true,
+      },
+    });
+  }
+
+  if (s.step === "experience") {
+    s.experience = raw;
+    s.step = "state";
+    return bot.sendMessage(chatId, t(s.lang, "askState"));
+  }
+
+  if (s.step === "state") {
+    s.state = raw;
+    s.step = "city";
+    return bot.sendMessage(chatId, t(s.lang, "askCity"));
+  }
+
+  if (s.step === "city") {
+    s.city = raw;
+    s.step = "zip";
+    return bot.sendMessage(chatId, t(s.lang, "askZip"));
+  }
+
+  if (s.step === "zip") {
+    s.zip = raw;
+    s.step = "driver";
+    return bot.sendMessage(chatId, t(s.lang, "askDriver"), {
+      reply_markup: {
+        keyboard: [[t(s.lang, "yes")], [t(s.lang, "no")]],
+        one_time_keyboard: true,
+        resize_keyboard: true,
+      },
+    });
+  }
+
+  if (s.step === "driver") {
+    s.driver = raw;
+    s.step = "confirm";
+
+    const summary =
+      `${t(s.lang, "confirmTitle")}\n\n` +
+      `Vacancy: ${s.vacancy}\n` +
+      `Name: ${s.name}\n` +
+      `Contact: ${s.contact}\n` +
+      `Experience: ${s.experience}\n` +
+      `State: ${s.state}\n` +
+      `City: ${s.city}\n` +
+      `ZIP: ${s.zip}\n` +
+      `Driver: ${s.driver}`;
+
+    await bot.sendMessage(chatId, summary, {
+      reply_markup: {
+        keyboard: [[t(s.lang, "yes")], [t(s.lang, "no")]],
+        one_time_keyboard: true,
+        resize_keyboard: true,
+      },
+    });
+    return;
+  }
+
+  if (s.step === "confirm") {
+    if (raw === t(s.lang, "yes")) {
+      await bot.sendMessage(chatId, t(s.lang, "confirmed"));
+      await bot.sendMessage(MANAGER_ID, `📥 New Application:\n${JSON.stringify(s, null, 2)}`);
+      delete sessions[chatId];
+    } else {
+      await bot.sendMessage(chatId, t(s.lang, "cancelled"));
+      delete sessions[chatId];
+    }
+    return;
+  }
 });
 
 // --------------------------------------------------
@@ -219,7 +315,7 @@ bot.on("message", async (msg) => {
 const app = express();
 app.get("/", (req, res) => {
   res.send("🤖 Telegram Recruiting Bot is running on Render (polling mode).");
-}); 
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
