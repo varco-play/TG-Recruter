@@ -1,13 +1,12 @@
 {
-  "name": "tg-recruiter-vercel",
+  "name": "recruiter-bot",
   "version": "1.0.0",
-  "type": "module",
-  "main": "api/webhook.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node api/webhook.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "node-telegram-bot-api": "^0.66.0",
-    "dotenv": "^17.2.3"
+    "dotenv": "^16.3.1",
+    "node-telegram-bot-api": "^0.66.0"
   }
 }
