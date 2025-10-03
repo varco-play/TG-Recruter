@@ -4,26 +4,18 @@ dotenv.config(); // loads local .env when running locally (safe to keep)
 
 import TelegramBot from "node-telegram-bot-api";
 
-/**
- * REQUIREMENTS (set as Vercel Environment Variables)
- * BOT_TOKEN - Telegram bot token (from BotFather)
- * MANAGER_CHAT_ID - your Telegram user id (where apps are sent)
- * VACANCIES - JSON array, e.g. ["Cashier","Deli Clerk","Store Manager"]
- *
- * On Vercel: set these in Project → Settings → Environment Variables
- */
-
 const TOKEN = process.env.BOT_TOKEN;
 const MANAGER_ID = process.env.MANAGER_CHAT_ID;
 const VACANCIES = JSON.parse(process.env.VACANCIES || "[]");
 
 if (!TOKEN || !MANAGER_ID) {
-  throw new Error("BOT_TOKEN and MANAGER_CHAT_ID must be set in environment");
+  throw new Error("❌ BOT_TOKEN and MANAGER_CHAT_ID must be set in env");
 }
 
-// create bot (we don't poll — webhook posts to this function)
-const bot = new TelegramBot(TOKEN);
-const sessions = {}; // in-memory per chat sessions (resets on redeploy)
+// Webhook mode: no polling
+const bot = new TelegramBot(TOKEN, { webHook: true });
+const sessions = {};
+
 
 // --------------------------------------------------
 // TRANSLATIONS (full texts in En / Ru / Es)
