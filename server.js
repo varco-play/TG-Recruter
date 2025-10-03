@@ -1,251 +1,227 @@
-// server.js
-require("dotenv").config();
-const TelegramBot = require("node-telegram-bot-api");
+import dotenv from "dotenv";
+dotenv.config();
 
-// ENV vars
+import TelegramBot from "node-telegram-bot-api";
+import express from "express";
+
+// --------------------------------------------------
+// ENVIRONMENT VARIABLES
+// --------------------------------------------------
 const TOKEN = process.env.BOT_TOKEN;
 const MANAGER_ID = process.env.MANAGER_CHAT_ID;
 const VACANCIES = JSON.parse(process.env.VACANCIES || "[]");
 
 if (!TOKEN || !MANAGER_ID) {
-  throw new Error("❌ BOT_TOKEN and MANAGER_CHAT_ID must be set in environment");
+  throw new Error("❌ BOT_TOKEN and MANAGER_CHAT_ID must be set in env");
 }
 
-// Start bot in polling mode
+// --------------------------------------------------
+// START BOT IN POLLING MODE
+// --------------------------------------------------
 const bot = new TelegramBot(TOKEN, { polling: true });
 console.log("🤖 Bot started in polling mode!");
 
-// In-memory sessions
+// --------------------------------------------------
+// SESSIONS
+// --------------------------------------------------
 const sessions = {};
 
 // --------------------------------------------------
-// Translations
+// TRANSLATIONS
 // --------------------------------------------------
 const T = {
   en: {
     startPanelTitle: "Welcome to GIG Investment Recruiting Bot",
-    startPanelBody: "Here you can apply for multiple job vacancies.",
+    startPanelBody:
+      "Here you can apply for multiple job vacancies. Press START to begin your application.",
     pressStart: "START",
-    chooseLanguagePrompt: "🌐 Choose your preferred language:",
-    mainMenuTitle: "🏠 Main Menu",
+    chooseLanguagePrompt: "Choose your preferred language of communication:",
+    mainMenuTitle: "Main Menu",
     aboutUs: "📖 About Us",
     contacts: "📞 Contacts",
     allVacancies: "💼 All Vacancies",
-    chooseLanguageMenu: "🌐 Change Language",
+    chooseLanguageMenu: "🌐 Choose Language",
     back: "🔙 Back",
     mainMenu: "🏠 Main Menu",
     vacancyPrompt: "📌 Which vacancy would you like to apply for?",
     askName: "👤 What’s your full name?",
-    askContact: "📱 Provide your contact number with country code:",
+    askContact:
+      "📱 Please provide your contact number (WhatsApp/Telegram) with country code:",
     askExperience: "💼 Please choose your experience:",
     exp0: "0 years",
     exp1: "1–3 years",
     exp2: "3+ years",
     askState: "📍 Which state do you live in?",
     askCity: "🏙️ Which city do you live in?",
-    askZip: "📮 ZIP code?",
+    askZip: "📮 Please provide your ZIP code:",
     askDriver: "🚘 Do you have a driver’s license?",
     yes: "✅ Yes",
     no: "❌ No",
     confirmTitle: "✅ Please confirm your application:",
     confirmed: "✅ Your application has been submitted successfully!",
     cancelled: "❌ Application cancelled.",
-    invalidOption: "⚠️ Please choose from the menu.",
+    invalidOption: "⚠️ Please choose an option from the menu.",
+    aboutPlaceholder: "About us: (fill this later).",
+    contactsPlaceholder: "Contacts: (fill this later).",
+    chooseLanguageAgain: "🌐 Choose language:",
+    startPanelFooter: "Press START to begin."
   },
   ru: {
     startPanelTitle: "Добро пожаловать в GIG Investment Recruiting Bot",
-    startPanelBody: "Здесь вы можете подать заявку на вакансии.",
+    startPanelBody:
+      "Здесь вы можете подать заявку на несколько вакансий. Нажмите START, чтобы начать.",
     pressStart: "СТАРТ",
-    chooseLanguagePrompt: "🌐 Выберите предпочитаемый язык:",
-    mainMenuTitle: "🏠 Главное меню",
+    chooseLanguagePrompt: "Выберите предпочитаемый язык общения:",
+    mainMenuTitle: "Главное меню",
     aboutUs: "📖 О нас",
     contacts: "📞 Контакты",
     allVacancies: "💼 Все вакансии",
-    chooseLanguageMenu: "🌐 Сменить язык",
+    chooseLanguageMenu: "🌐 Выбрать язык",
     back: "🔙 Назад",
     mainMenu: "🏠 Главное меню",
-    vacancyPrompt: "📌 На какую вакансию хотите подать заявку?",
-    askName: "👤 Ваше полное имя?",
-    askContact: "📱 Укажите контакт с кодом страны:",
-    askExperience: "💼 Выберите опыт работы:",
+    vacancyPrompt: "📌 На какую вакансию вы хотите подать заявку?",
+    askName: "👤 Как Вас зовут (полное имя)?",
+    askContact: "📱 Укажите контакт (WhatsApp/Telegram) с кодом страны:",
+    askExperience: "💼 Выберите ваш опыт:",
     exp0: "0 лет",
     exp1: "1–3 года",
-    exp2: "3+ лет",
-    askState: "📍 В каком регионе вы живете?",
-    askCity: "🏙️ В каком городе вы живете?",
-    askZip: "📮 Почтовый индекс?",
+    exp2: "3+ года",
+    askState: "📍 В каком вы штате/области?",
+    askCity: "🏙️ В каком вы городе?",
+    askZip: "📮 Укажите почтовый индекс (ZIP):",
     askDriver: "🚘 У вас есть водительские права?",
     yes: "✅ Да",
     no: "❌ Нет",
-    confirmTitle: "✅ Подтвердите заявку:",
+    confirmTitle: "✅ Подтвердите вашу заявку:",
     confirmed: "✅ Ваша заявка успешно отправлена!",
     cancelled: "❌ Заявка отменена.",
-    invalidOption: "⚠️ Выберите вариант из меню.",
+    invalidOption: "⚠️ Пожалуйста, выберите вариант из меню.",
+    aboutPlaceholder: "О нас: (заполните позже).",
+    contactsPlaceholder: "Контакты: (заполните позже).",
+    chooseLanguageAgain: "🌐 Выберите язык:",
+    startPanelFooter: "Нажмите СТАРТ, чтобы начать."
   },
   es: {
     startPanelTitle: "Bienvenido a GIG Investment Recruiting Bot",
-    startPanelBody: "Aquí puede postularse a varias vacantes.",
+    startPanelBody:
+      "Aquí puede postularse a múltiples vacantes. Presione START para comenzar su solicitud.",
     pressStart: "INICIAR",
-    chooseLanguagePrompt: "🌐 Elija su idioma preferido:",
-    mainMenuTitle: "🏠 Menú principal",
+    chooseLanguagePrompt: "Elija su idioma preferido de comunicación:",
+    mainMenuTitle: "Menú principal",
     aboutUs: "📖 Sobre nosotros",
     contacts: "📞 Contactos",
     allVacancies: "💼 Todas las vacantes",
-    chooseLanguageMenu: "🌐 Cambiar idioma",
+    chooseLanguageMenu: "🌐 Elegir idioma",
     back: "🔙 Atrás",
-    mainMenu: "🏠 Menú principal",
-    vacancyPrompt: "📌 ¿A qué vacante desea postularse?",
+    mainMenu: "🏠 Menú",
+    vacancyPrompt: "📌 ¿A qué vacante le gustaría postularse?",
     askName: "👤 ¿Cuál es su nombre completo?",
-    askContact: "📱 Proporcione su número con código de país:",
+    askContact:
+      "📱 Proporcione su número de contacto (WhatsApp/Telegram) con código de país:",
     askExperience: "💼 Seleccione su experiencia:",
     exp0: "0 años",
     exp1: "1–3 años",
     exp2: "3+ años",
     askState: "📍 ¿En qué estado vive?",
     askCity: "🏙️ ¿En qué ciudad vive?",
-    askZip: "📮 Código postal?",
+    askZip: "📮 Proporcione su código postal (ZIP):",
     askDriver: "🚘 ¿Tiene licencia de conducir?",
     yes: "✅ Sí",
     no: "❌ No",
-    confirmTitle: "✅ Confirme su aplicación:",
-    confirmed: "✅ ¡Su aplicación fue enviada con éxito!",
-    cancelled: "❌ Aplicación cancelada.",
-    invalidOption: "⚠️ Elija una opción del menú.",
-  },
+    confirmTitle: "✅ Por favor confirme su solicitud:",
+    confirmed: "✅ ¡Su solicitud ha sido enviada con éxito!",
+    cancelled: "❌ Solicitud cancelada.",
+    invalidOption: "⚠️ Por favor elija una opción del menú.",
+    aboutPlaceholder: "Sobre nosotros: (rellene más tarde).",
+    contactsPlaceholder: "Contactos: (rellene más tarde).",
+    chooseLanguageAgain: "🌐 Elegir idioma:",
+    startPanelFooter: "Presione INICIAR para comenzar."
+  }
 };
 
 function t(lang, key) {
-  return T[lang]?.[key] || T["en"][key];
+  if (!lang || !T[lang]) lang = "en";
+  return T[lang][key] ?? T.en[key] ?? "";
 }
 
 // --------------------------------------------------
-// Keyboards
+// KEYBOARDS
 // --------------------------------------------------
 function languageKeyboard() {
   return {
     keyboard: [["🇬🇧 English", "🇷🇺 Русский", "🇪🇸 Español"]],
+    one_time_keyboard: true,
     resize_keyboard: true,
   };
 }
-function vacanciesKeyboard(lang) {
+
+function vacanciesKeyboard(lang = "en") {
   const kb = [];
   for (let i = 0; i < VACANCIES.length; i += 2) {
     kb.push([VACANCIES[i], VACANCIES[i + 1]].filter(Boolean));
   }
   return { keyboard: kb, resize_keyboard: true };
 }
-function experienceKeyboard(lang) {
-  return {
-    keyboard: [[t(lang, "exp0"), t(lang, "exp1")], [t(lang, "exp2")]],
-    resize_keyboard: true,
-  };
-}
-function yesNoKeyboard(lang) {
-  return {
-    keyboard: [[t(lang, "yes"), t(lang, "no")]],
-    resize_keyboard: true,
-  };
-}
 
 // --------------------------------------------------
-// Bot Flow
+// BOT FLOW
 // --------------------------------------------------
-bot.onText(/\/start/, (msg) => {
+bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { lang: "en", step: null };
-  bot.sendMessage(
-    chatId,
+
+  const panel =
     `🇬🇧 ${T.en.startPanelTitle}\n${T.en.startPanelBody}\n\n` +
-      `🇷🇺 ${T.ru.startPanelTitle}\n${T.ru.startPanelBody}\n\n` +
-      `🇪🇸 ${T.es.startPanelTitle}\n${T.es.startPanelBody}`,
-    { reply_markup: languageKeyboard() }
-  );
+    `🇷🇺 ${T.ru.startPanelTitle}\n${T.ru.startPanelBody}\n\n` +
+    `🇪🇸 ${T.es.startPanelTitle}\n${T.es.startPanelBody}\n\n` +
+    `${T.en.startPanelFooter}`;
+
+  await bot.sendMessage(chatId, panel, {
+    reply_markup: {
+      keyboard: [[T.en.pressStart], ["🇬🇧 English", "🇷🇺 Русский", "🇪🇸 Español"]],
+      one_time_keyboard: true,
+      resize_keyboard: true,
+    },
+  });
 });
 
-bot.on("message", (msg) => {
+// For now: simple language switch demo
+bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
-  const text = msg.text;
-  if (!sessions[chatId]) sessions[chatId] = { lang: "en", step: null };
+  const raw = String(msg.text || "").trim();
+  if (!sessions[chatId]) sessions[chatId] = { lang: "en" };
+
   const s = sessions[chatId];
 
-  // Language selection
-  if (/English/i.test(text)) {
+  if (/English/i.test(raw)) {
     s.lang = "en";
-    s.step = "vacancy";
-    return bot.sendMessage(chatId, t(s.lang, "vacancyPrompt"), {
-      reply_markup: vacanciesKeyboard(s.lang),
+    return bot.sendMessage(chatId, "✅ Language set to English", {
+      reply_markup: vacanciesKeyboard("en"),
     });
   }
-  if (/Рус/i.test(text)) {
+  if (/Русск|Русский/i.test(raw)) {
     s.lang = "ru";
-    s.step = "vacancy";
-    return bot.sendMessage(chatId, t(s.lang, "vacancyPrompt"), {
-      reply_markup: vacanciesKeyboard(s.lang),
+    return bot.sendMessage(chatId, "✅ Язык переключен на русский", {
+      reply_markup: vacanciesKeyboard("ru"),
     });
   }
-  if (/Español/i.test(text)) {
+  if (/Español/i.test(raw)) {
     s.lang = "es";
-    s.step = "vacancy";
-    return bot.sendMessage(chatId, t(s.lang, "vacancyPrompt"), {
-      reply_markup: vacanciesKeyboard(s.lang),
+    return bot.sendMessage(chatId, "✅ Idioma cambiado a español", {
+      reply_markup: vacanciesKeyboard("es"),
     });
   }
+});
 
-  // Flow
-  switch (s.step) {
-    case "vacancy":
-      if (VACANCIES.includes(text)) {
-        s.vacancy = text;
-        s.step = "name";
-        return bot.sendMessage(chatId, t(s.lang, "askName"));
-      }
-      break;
+// --------------------------------------------------
+// EXPRESS SERVER (for Render port binding)
+// --------------------------------------------------
+const app = express();
+app.get("/", (req, res) => {
+  res.send("🤖 Telegram Recruiting Bot is running on Render (polling mode).");
+});
 
-    case "name":
-      s.name = text;
-      s.step = "contact";
-      return bot.sendMessage(chatId, t(s.lang, "askContact"));
-
-    case "contact":
-      s.contact = text;
-      s.step = "experience";
-      return bot.sendMessage(chatId, t(s.lang, "askExperience"), {
-        reply_markup: experienceKeyboard(s.lang),
-      });
-
-    case "experience":
-      s.experience = text;
-      s.step = "state";
-      return bot.sendMessage(chatId, t(s.lang, "askState"));
-
-    case "state":
-      s.state = text;
-      s.step = "city";
-      return bot.sendMessage(chatId, t(s.lang, "askCity"));
-
-    case "city":
-      s.city = text;
-      s.step = "zip";
-      return bot.sendMessage(chatId, t(s.lang, "askZip"));
-
-    case "zip":
-      s.zip = text;
-      s.step = "driver";
-      return bot.sendMessage(chatId, t(s.lang, "askDriver"), {
-        reply_markup: yesNoKeyboard(s.lang),
-      });
-
-    case "driver":
-      s.driverLicense = text;
-      s.step = "confirm";
-      const summary =
-        `${t(s.lang, "confirmTitle")}\n\n` +
-        `👤 ${s.name}\n📱 ${s.contact}\n💼 ${s.experience}\n` +
-        `📍 ${s.state}, ${s.city}\n📮 ${s.zip}\n🚘 ${s.driverLicense}\n📌 ${s.vacancy}`;
-      bot.sendMessage(chatId, summary);
-      bot.sendMessage(MANAGER_ID, summary);
-      bot.sendMessage(chatId, t(s.lang, "confirmed"));
-      delete sessions[chatId];
-      break;
-  }
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🌍 Express server running on port ${PORT}`);
 });
