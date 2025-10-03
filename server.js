@@ -4,9 +4,6 @@ dotenv.config();
 import TelegramBot from "node-telegram-bot-api";
 import express from "express";
 
-// --------------------------------------------------
-// ENVIRONMENT VARIABLES
-// --------------------------------------------------
 const TOKEN = process.env.BOT_TOKEN;
 const MANAGER_ID = process.env.MANAGER_CHAT_ID;
 const VACANCIES = JSON.parse(process.env.VACANCIES || "[]");
@@ -15,20 +12,11 @@ if (!TOKEN || !MANAGER_ID) {
   throw new Error("❌ BOT_TOKEN and MANAGER_CHAT_ID must be set in env");
 }
 
-// --------------------------------------------------
-// START BOT IN POLLING MODE
-// --------------------------------------------------
 const bot = new TelegramBot(TOKEN, { polling: true });
 console.log("🤖 Bot started in polling mode!");
 
-// --------------------------------------------------
-// SESSIONS
-// --------------------------------------------------
 const sessions = {};
 
-// --------------------------------------------------
-// TRANSLATIONS
-// --------------------------------------------------
 const T = {
   en: {
     startPanelTitle: "Welcome to GIG Investment Recruiting Bot",
@@ -147,9 +135,6 @@ function t(lang, key) {
   return T[lang][key] ?? T.en[key] ?? "";
 }
 
-// --------------------------------------------------
-// KEYBOARDS
-// --------------------------------------------------
 function mainMenuKeyboard(lang = "en") {
   return {
     keyboard: [
@@ -176,9 +161,6 @@ function vacanciesKeyboard(lang = "en") {
   return { keyboard: kb, resize_keyboard: true };
 }
 
-// --------------------------------------------------
-// STEP HANDLER
-// --------------------------------------------------
 function sendStep(chatId, step) {
   const s = sessions[chatId];
   const lang = s.lang || "en";
@@ -217,9 +199,6 @@ function sendStep(chatId, step) {
   s.step = step;
 }
 
-// --------------------------------------------------
-// BOT FLOW
-// --------------------------------------------------
 bot.onText(/\/start/, (msg) => {
   const chatId = msg.chat.id;
   sessions[chatId] = { lang: "en", step: null };
@@ -238,7 +217,6 @@ bot.onText(/\/start/, (msg) => {
   });
 });
 
-// One message handler
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
   const text = String(msg.text || "").trim();
@@ -247,7 +225,6 @@ bot.on("message", (msg) => {
   const s = sessions[chatId];
   const lang = s.lang || "en";
 
-  // Language selection
   if (/English/i.test(text)) {
     s.lang = "en";
     return sendStep(chatId, "mainMenu");
@@ -261,28 +238,21 @@ bot.on("message", (msg) => {
     return sendStep(chatId, "mainMenu");
   }
 
-  // Navigation
   if (text === t(lang, "mainMenu")) return sendStep(chatId, "mainMenu");
   if (text === t(lang, "back")) return sendStep(chatId, "mainMenu");
 
-  // Start button
   if (text === T.en.pressStart || text === T.ru.pressStart || text === T.es.pressStart) {
     return sendStep(chatId, "mainMenu");
   }
 
-  // Menu actions
   if (text === t(lang, "allVacancies")) return sendStep(chatId, "vacancy");
   if (text === t(lang, "aboutUs")) return bot.sendMessage(chatId, t(lang, "aboutPlaceholder"), { reply_markup: mainMenuKeyboard(lang) });
   if (text === t(lang, "contacts")) return bot.sendMessage(chatId, t(lang, "contactsPlaceholder"), { reply_markup: mainMenuKeyboard(lang) });
   if (text === t(lang, "chooseLanguageMenu")) return bot.sendMessage(chatId, t(lang, "chooseLanguagePrompt"), { reply_markup: { keyboard: [["🇬🇧 English", "🇷🇺 Русский", "🇪🇸 Español"]], resize_keyboard: true } });
 
-  // If nothing matches
   bot.sendMessage(chatId, t(lang, "invalidOption"));
 });
 
-// --------------------------------------------------
-// EXPRESS SERVER (for Render port binding)
-// --------------------------------------------------
 const app = express();
 app.get("/", (req, res) => {
   res.send("🤖 Telegram Recruiting Bot is running on Render (polling mode).");
