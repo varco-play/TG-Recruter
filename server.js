@@ -141,11 +141,7 @@ function findVacancyByLabel(label, lang) {
 // KEYBOARDS
 // --------------------------------------------------
 function languageKeyboard() {
-  return {
-    keyboard: [["🇬🇧 English", "🇷🇺 Русский", "🇪🇸 Español"]],
-    one_time_keyboard: true,
-    resize_keyboard: true
-  };
+  return { keyboard: [["🇬🇧 English", "🇷🇺 Русский", "🇪🇸 Español"]], one_time_keyboard: true, resize_keyboard: true };
 }
 
 function mainMenuKeyboard(lang) {
@@ -213,127 +209,80 @@ bot.on("message", async (msg) => {
   const s = sessions[chatId];
   const lang = s.lang;
 
-  // --- Language switch ---
-  if (/English/i.test(raw)) {
+  // --- Language Buttons Dynamic ---
+  const langButtons = {
+    en: `🌐 ${t("en", "chooseLanguageMenu")} ${t("en", "langFlags").en}`,
+    ru: `🌐 ${t("ru", "chooseLanguageMenu")} ${t("ru", "langFlags").ru}`,
+    es: `🌐 ${t("es", "chooseLanguageMenu")} ${t("es", "langFlags").es}`
+  };
+
+  if (raw === "🇬🇧 English" || raw === langButtons.en) {
     s.lang = "en"; s.step = "main";
     return bot.sendMessage(chatId, "✅ Language set to English", { reply_markup: mainMenuKeyboard("en") });
   }
-  if (/Русск|Русский/i.test(raw)) {
+  if (raw === "🇷🇺 Русский" || raw === langButtons.ru) {
     s.lang = "ru"; s.step = "main";
     return bot.sendMessage(chatId, "✅ Язык переключен на русский", { reply_markup: mainMenuKeyboard("ru") });
   }
-  if (/Español/i.test(raw)) {
+  if (raw === "🇪🇸 Español" || raw === langButtons.es) {
     s.lang = "es"; s.step = "main";
     return bot.sendMessage(chatId, "✅ Idioma cambiado a español", { reply_markup: mainMenuKeyboard("es") });
   }
 
-  // --- Back & Main Menu buttons ---
+  // --- Back & Main Menu ---
   if (raw === t(lang, "back")) {
-    if (s.previousStep) {
-      s.step = s.previousStep;
-      s.previousStep = null;
-      return bot.sendMessage(chatId, "🔙 Back", { reply_markup: backMainKeyboard(lang) });
-    } else {
-      s.step = "main";
-      return bot.sendMessage(chatId, t(lang, "mainMenuTitle"), { reply_markup: mainMenuKeyboard(lang) });
-    }
+    if (s.previousStep) { s.step = s.previousStep; s.previousStep = null; }
+    else s.step = "main";
+    return bot.sendMessage(chatId, "🔙 Back", { reply_markup: backMainKeyboard(lang) });
   }
-
   if (raw === t(lang, "mainMenu")) {
     s.step = "main";
     return bot.sendMessage(chatId, t(lang, "mainMenuTitle"), { reply_markup: mainMenuKeyboard(lang) });
   }
 
-  // --- Main Menu actions ---
+  // --- Main Menu Actions ---
   if (raw === t(lang, "aboutUs")) return bot.sendMessage(chatId, "📖 About us info...", { reply_markup: mainMenuKeyboard(lang) });
   if (raw === t(lang, "contacts")) return bot.sendMessage(chatId, "📞 Contact info...", { reply_markup: mainMenuKeyboard(lang) });
+  if (raw === t(lang, "allVacancies")) { s.step = "choose_vacancy"; return bot.sendMessage(chatId, t(lang, "vacancyPrompt"), { reply_markup: vacanciesKeyboard(lang) }); }
 
-  if (raw === t(lang, "allVacancies")) {
-    s.step = "choose_vacancy";
-    return bot.sendMessage(chatId, t(lang, "vacancyPrompt"), { reply_markup: vacanciesKeyboard(lang) });
-  }
-
-  // --- Application flow ---
+  // --- Application Flow ---
   switch (s.step) {
     case "choose_vacancy": {
       const vac = findVacancyByLabel(raw, lang);
       if (!vac) return bot.sendMessage(chatId, t(lang, "invalidOption"), { reply_markup: vacanciesKeyboard(lang) });
-      s.vacancy = vac;
-      s.previousStep = "choose_vacancy";
-      s.step = "ask_name";
+      s.vacancy = vac; s.previousStep = "choose_vacancy"; s.step = "ask_name";
       return bot.sendMessage(chatId, t(lang, "askName"), { reply_markup: backMainKeyboard(lang) });
     }
     case "ask_name": {
       if (!raw) return bot.sendMessage(chatId, t(lang, "invalidOption"), { reply_markup: backMainKeyboard(lang) });
-      s.name = raw;
-      s.previousStep = "ask_name";
-      s.step = "ask_contact";
+      s.name = raw; s.previousStep = "ask_name"; s.step = "ask_contact";
       return bot.sendMessage(chatId, t(lang, "askContact"), { reply_markup: backMainKeyboard(lang) });
     }
     case "ask_contact": {
-      s.contact = raw;
-      s.previousStep = "ask_contact";
-      s.step = "ask_experience";
+      s.contact = raw; s.previousStep = "ask_contact"; s.step = "ask_experience";
       return bot.sendMessage(chatId, t(lang, "askExperience"), { reply_markup: experienceKeyboard(lang) });
     }
     case "ask_experience": {
       if (!t(lang, "expOptions").includes(raw)) return bot.sendMessage(chatId, t(lang, "invalidOption"), { reply_markup: experienceKeyboard(lang) });
-      s.experience = raw;
-      s.previousStep = "ask_experience";
-      s.step = "ask_state";
+      s.experience = raw; s.previousStep = "ask_experience"; s.step = "ask_state";
       return bot.sendMessage(chatId, t(lang, "askState"), { reply_markup: backMainKeyboard(lang) });
     }
-    case "ask_state": {
-      s.state = raw;
-      s.previousStep = "ask_state";
-      s.step = "ask_city";
-      return bot.sendMessage(chatId, t(lang, "askCity"), { reply_markup: backMainKeyboard(lang) });
-    }
-    case "ask_city": {
-      s.city = raw;
-      s.previousStep = "ask_city";
-      s.step = "ask_zip";
-      return bot.sendMessage(chatId, t(lang, "askZIP"), { reply_markup: backMainKeyboard(lang) });
-    }
-    case "ask_zip": {
-      if (!/^\d+$/.test(raw)) return bot.sendMessage(chatId, t(lang, "invalidOption"), { reply_markup: backMainKeyboard(lang) });
-      s.zip = raw;
-      s.previousStep = "ask_zip";
-      s.step = "ask_driver";
-      return bot.sendMessage(chatId, t(lang, "askDriver"), { reply_markup: driverKeyboard(lang) });
-    }
+    case "ask_state": { s.state = raw; s.previousStep = "ask_state"; s.step = "ask_city"; return bot.sendMessage(chatId, t(lang, "askCity"), { reply_markup: backMainKeyboard(lang) }); }
+    case "ask_city": { s.city = raw; s.previousStep = "ask_city"; s.step = "ask_zip"; return bot.sendMessage(chatId, t(lang, "askZIP"), { reply_markup: backMainKeyboard(lang) }); }
+    case "ask_zip": { if (!/^\d+$/.test(raw)) return bot.sendMessage(chatId, t(lang, "invalidOption"), { reply_markup: backMainKeyboard(lang) }); s.zip = raw; s.previousStep = "ask_zip"; s.step = "ask_driver"; return bot.sendMessage(chatId, t(lang, "askDriver"), { reply_markup: driverKeyboard(lang) }); }
     case "ask_driver": {
       if (!t(lang, "driverOptions").includes(raw)) return bot.sendMessage(chatId, t(lang, "invalidOption"), { reply_markup: driverKeyboard(lang) });
-      s.driver = raw;
-      s.step = "confirm";
-      const summary = 
-        `${t(lang, "confirm")}\n` +
-        `🏢 Vacancy: ${s.vacancy[lang]}\n` +
-        `✍️ Name: ${s.name}\n` +
-        `📱 Contact: ${s.contact}\n` +
-        `💼 Experience: ${s.experience}\n` +
-        `🏙️ State: ${s.state}\n` +
-        `🏘️ City: ${s.city}\n` +
-        `🏷️ ZIP: ${s.zip}\n` +
-        `🚗 Driver: ${s.driver}`;
+      s.driver = raw; s.step = "confirm";
+      const summary = `${t(lang, "confirm")}\n🏢 Vacancy: ${s.vacancy[lang]}\n✍️ Name: ${s.name}\n📱 Contact: ${s.contact}\n💼 Experience: ${s.experience}\n🏙️ State: ${s.state}\n🏘️ City: ${s.city}\n🏷️ ZIP: ${s.zip}\n🚗 Driver: ${s.driver}`;
       return bot.sendMessage(chatId, summary, { reply_markup: { keyboard: [[t(lang, "confirmBtn")], [t(lang, "back"), t(lang, "mainMenu")]], resize_keyboard: true } });
     }
     case "confirm": {
       if (raw !== t(lang, "confirmBtn")) return bot.sendMessage(chatId, t(lang, "invalidOption"));
-      // send to manager
-      const msgToManager = 
-        `📨 New Application\n` +
-        `Vacancy: ${s.vacancy[lang]}\n` +
-        `Name: ${s.name}\n` +
-        `Contact: ${s.contact}\n` +
-        `Experience: ${s.experience}\n` +
-        `State: ${s.state}\n` +
-        `City: ${s.city}\n` +
-        `ZIP: ${s.zip}\n` +
-        `Driver: ${s.driver}`;
-      await bot.sendMessage(MANAGER_ID, msgToManager);
+      // Send to manager
+      const managerMsg = `New application:\n🏢 Vacancy: ${s.vacancy[lang]}\n✍️ Name: ${s.name}\n📱 Contact: ${s.contact}\n💼 Experience: ${s.experience}\n🏙️ State: ${s.state}\n🏘️ City: ${s.city}\n🏷️ ZIP: ${s.zip}\n🚗 Driver: ${s.driver}`;
+      await bot.sendMessage(MANAGER_ID, managerMsg);
       await bot.sendMessage(chatId, t(lang, "applied"), { reply_markup: mainMenuKeyboard(lang) });
-      s.step = "main";
+      s.step = "main"; s.previousStep = null;
       return;
     }
   }
